@@ -1,0 +1,146 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=.5in]{geometry}
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\setlength{\droptitle}{-6em}
+\author{Maurice Diesendruck, Sukyung Park, Bowei Yan, Michael Zhang}
+\title{SDS 387 HW 4}
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+\maketitle
+\setcounter{section}{2}
+
+\section{Comparison}
+This is an analysis of the LASSO, BLASSO, and Horseshoe priors on diabetes data.
+  \begin{enumerate}    
+      \item LASSO \\
+      The LASSO is an L1-penalized least squares estimate of $\beta$, with $\tilde{y}$
+      as the mean-centered outcome variable, where the following is optimized:\\
+      $$\min_{\beta} (\tilde{y} - XB)'(\tilde{y} - XB) + 
+        \lambda\sum\limits_{j=1}^p |\beta_{j}|$$
+      \begin{enumerate}
+        \item Strengths
+              \begin{enumerate}
+                \item Easy to implement.
+              \end{enumerate}
+        \item Weaknesses
+              \begin{enumerate}
+                \item Proposed standard error estimators are not considered satisfactory.
+              \end{enumerate}
+      \end{enumerate}
+      
+      \item BLASSO \\
+      The BLASSO interprets the L1-penalty as a prior on $\beta$ and $\sigma^2$. In this 
+      case, $y$ is normal, the prior $\pi(\beta|\sigma^2)$ is Laplace (i.e. double
+      exponential), and the prior $\pi(\sigma^2)$ is non-informative and defined as such to 
+      ensure a 
+      unimodal posterior:
+      \begin{align*}
+      y|\mu,X,\beta,\sigma^2 &\sim\ N(\mu1_n+X\beta,\sigma^2I_n) \\
+      \pi(\beta|\sigma^2)&=\prod\limits_{j=1}^p \frac{\lambda}{2\sqrt{\sigma^2}}e^{-\lambda
+        |\beta_j|/\sqrt{\sigma^2}} \hspace{5mm}\text{(Laplace distribution)}\\
+      \pi(\sigma^2)&=\frac{1}{\sigma^2}
+      \end{align*}
+      \begin{enumerate}
+        \item Strengths
+              \begin{enumerate}
+                \item Easy to implement
+                \item Automatically provides interval estimates for all parameters, 
+                  including the error variance.
+              \end{enumerate}
+        \item Weaknesses
+              \begin{enumerate}
+                \item More computationally intensive than LASSO.
+              \end{enumerate}
+      \end{enumerate}
+      
+      \item Horseshoe \\
+      The Horseshoe (HS) prior assumes $y|\theta \sim\ N(\theta,\sigma^2 I)$, and aims to
+      (1) estimate $\theta$, and (2) predict future realizations of $y$. It is especially
+      useful in cases where most covariates are nearly zero (i.e. sparse $\theta$). The
+      model is as follows:
+      \begin{align*}
+      \theta_i|\lambda_i &\sim\ N(0,\lambda_i^2)\\
+      \lambda_i|\tau &\sim\ C^+(0,\tau)\\
+      \tau &\sim\ C^+(0,\sigma)\\
+      E(\theta_i|y) &= \int_{0}^{1} (1-\kappa_i)y_ip(\kappa_i|y)\text{d}\kappa_i = (1-E
+      (\kappa_i|y)) y_i
+      \end{align*}
+      Where $\kappa_i = 1/(1+\lambda_i^2)$, assuming fixed values $\sigma^2=\tau^2=1$. Given
+      $\lambda_i \geq 0$, this implies that $\lambda_i$'s are indirectly related to amount
+      of shrinkage (e.g. high $\lambda_i$ means low $\kappa_i$, and less shrinkage).
+      \begin{enumerate}
+        \item Strengths
+              \begin{enumerate}
+                \item Easy to implement.
+                \item Has fewer hyperparameters.
+                \item Robust and flexible to high or low sparsity situations.
+                \item Converges efficiently.
+              \end{enumerate}
+        \item Weaknesses
+              \begin{enumerate}
+                \item 
+                \item 
+              \end{enumerate}
+      \end{enumerate}
+  \end{enumerate}
+
+\section{Perform Gibbs Sampling for Bayesian Lasso}
+  Reference: Park and Casella (2008) (Section 2).
+  \begin{enumerate}
+      \item Model and Prior for BLASSO\\
+      See 3.2, above.
+      \item Complete Conditional for each (set of) Parameters\\
+      To get complete conditionals, the prior $\pi(\beta|\sigma^2)$ is represented
+      differently, as a scaled mixture of normals (with exponential mixing density).
+      Again, the Laplace can be re-written as the integrated product of a Normal and
+      Exponential distribution:\\
+          \begin{align*}
+          \pi(\beta|\sigma^2)&=\prod\limits_{j=1}^p \frac{\lambda}{2\sqrt{\sigma^2}}e^{
+          -\lambda|\beta_j|/\sqrt{\sigma^2}} \hspace{33mm}\text{(Laplace distribution)}\\
+          &=\prod\limits_{j=1}^p \int_{0}^{\infty} \text{ Normal * Exponential}
+          \end{align*}
+      This way, full conditionals become:\\
+          \begin{align*}
+          y|\mu,X,\beta,\sigma^2 &\sim\ N(\mu1_n+X\beta,\sigma^2I_n),\\
+          \beta|\sigma^2,\tau_1^2,\ldots,\tau_p^2 &\sim\ N_p(0_p,\sigma^2D_\tau),
+            &&\hspace{5mm}\text{(Normal part of Laplace)}\\
+          \text{ where }D_\tau &= diag(\tau_1^2,\ldots,\tau_p^2),\\
+          \sigma^2,\tau_1^2,\ldots,\tau_p^2 &\sim\ \pi(\sigma^2)d\sigma^2 \prod_{j=1}^p
+            \frac{\lambda^2}{2}e^{\lambda^2\tau_j^2/2}d\tau_j^2,
+            &&\hspace{5mm}\text{(Exponential part of Laplace)}\\
+          \sigma^2,\tau_1^2,\ldots,\tau_p^2 &> 0.
+          \end{align*}
+      
+  \end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+
+
+
+\subsection*{Results and Discussion}
+Our model is run with the following command:
+<<eval=FALSE>>=
+# R code here!
+@
+
+<<echo=FALSE, results=hide>>=
+@
+
+
+\end{document}
