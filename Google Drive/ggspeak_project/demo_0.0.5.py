@@ -32,8 +32,7 @@ def main():
     g = copy(g_base)
 
     # Run speech recognition and graphing in a streaming format.
-    attentive = True
-    while attentive:
+    while 1:
         raw_input('Tap ENTER to continue.')
         with mic as source:
             audio = get_audio(r, source)
@@ -55,16 +54,28 @@ def main():
                     # TODO: Write save function.
                     continue
                 elif is_reset(terms):
-                    print 'Define a new graph.'
-                    g = copy(g_base)
                     plt.clf()
+                    g = copy(g_base)
+                    data_preview(g)
+                    print 'DEFINE a new graph.'
+                elif is_summary(terms):
+                    g.summarize()
                 elif g.has_base():
+                    print 'BASE is set. Now adjust features.'
                     g = update_graph(g, terms)
+                    graph_if_valid(g)
                 else:
                     g = create_graph(g, terms)
+                    graph_if_valid(g)
 
-                # Create new plot with current set of object attributes.
-                g.make_gg_plot()
+
+def graph_if_valid(g):
+    # Graph the plot if it's valid, otherwise summarize.
+    if g.is_valid_graph():
+        g.make_gg_plot()
+    else:
+        print 'INVALID graph.'
+        g.summarize()
 
 
 def create_graph(g, terms):
@@ -98,7 +109,8 @@ def update_graph(g, terms):
     Returns:
         g: Graphic object.
     """
-    g = extract_stat_functions(g, terms)
+    if g.geom == 'point':
+        g = extract_stat_functions(g, terms)
     return g
 
 
@@ -122,7 +134,7 @@ def prepare_mic():
     m = sr.Microphone()
     with m as source:
         r.adjust_for_ambient_noise(source, duration=2)
-        r.pause_threshold = 1.5
+        r.pause_threshold = 1.0
     return r, m
 
 
@@ -141,11 +153,13 @@ def choose_dataset(g):
     names = '[' + ', '.join(list(g.dataset.columns.values)) + ']'
     names = names.upper()
     print('\nYou are using the dataset ' + g.filename)
+    data_preview(g)
+    return g
+
+
+def data_preview(g):
     print('Data preview:')
     print(g.dataset.head(5))
-    print
-
-    return g
 
 
 def get_audio(r, source):
@@ -162,14 +176,20 @@ def tokenize(text):
 
 
 def is_quit(terms):
-    quit_words = [
-        'quit', 'stop', 'done', 'finish', 'finished', 'end', 'enough']
+    quit_words = ['quit', 'stop', 'done', 'finish', 'finished', 'end', 'enough',
+                  'exit', 'goodbye']
     wants_to_quit = bool(set(quit_words) & set(terms))
     return wants_to_quit
 
 
+def is_summary(terms):
+    summary_words = ['summary', 'summarize', 'describe', 'description']
+    wants_summary = bool(set(summary_words) & set(terms))
+    return wants_summary
+
+
 def is_reset(terms):
-    reset_words = ['reset', 'clear']
+    reset_words = ['reset', 'clear', 'new']
     wants_to_reset = bool(set(reset_words) & set(terms))
     return wants_to_reset
 
@@ -191,7 +211,7 @@ def extract_data_cols(g, terms):
 
 def extract_geom(g, terms):
     if 'histogram' in terms:
-        g.geom = 'histogram'
+        g.geom = 'hist'
     elif 'bar' in terms or 'barplot' in terms:
         g.geom = 'bar'
     elif 'density' in terms:
@@ -201,7 +221,11 @@ def extract_geom(g, terms):
     elif 'point' in terms or 'scatter' in terms:
         g.geom = 'point'
     elif len(g.data_cols) == 1:
-        g.geom = 'histogram'
+        d_type = g.dataset[g.data_cols[0]].dtype
+        if d_type in ['float64', 'int64']:
+            g.geom = 'hist'
+        else:
+            g.geom = 'bar'
     elif len(g.data_cols) == 2:
         g.geom = 'point'
     else:

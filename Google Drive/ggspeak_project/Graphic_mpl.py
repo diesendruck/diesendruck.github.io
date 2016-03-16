@@ -45,7 +45,7 @@ class Graphic(object):
         if self.geom in ['point', 'line']:
             if len(self.data_cols) == 1:
                 return True
-        elif self.geom in ['histogram', 'bar']:
+        elif self.geom in ['hist', 'bar']:
             if len(self.data_cols) == 2:
                 return True
         else:
@@ -56,10 +56,6 @@ class Graphic(object):
 
         Assembles characteristics in the syntax of the graphic library.
         """
-        if not self.is_valid_graph():
-            self.summarize()
-            return None
-
         # Make a scatter plot.
         if self.geom in ['point']:
             d1_name = str(self.data_cols[0])
@@ -73,7 +69,7 @@ class Graphic(object):
             plt.title('Scatter plot of {} and {}'.format(d1_name, d2_name))
 
         # Make a histogram or bar chart.
-        elif self.geom in ['histogram', 'bar']:
+        elif self.geom in ['hist', 'bar']:
 
             d_name = str(self.data_cols[0])
             d = self.dataset[d_name]
@@ -113,7 +109,7 @@ class Graphic(object):
                     self.dataset[self.data_cols[1]].dtype in ['float64',
                                                               'int64']]):
                 self.valid_graph = True
-        elif self.geom in ['histogram', 'bar']:
+        elif self.geom in ['hist', 'bar']:
             if len(self.data_cols) == 1:
                 d_name = str(self.data_cols[0])
                 d = self.dataset[d_name]
